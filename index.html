@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bản đồ tô màu Đồng bằng sông Hồng</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6f4;color:#183344;font:15px system-ui,"Segoe UI",sans-serif}
+header{max-width:1400px;margin:auto;padding:20px 24px 14px;display:flex;justify-content:space-between;gap:18px;align-items:end}h1{font-size:24px;margin:0 0 5px}p{margin:0;color:#5d7077}
+main{max-width:1400px;margin:auto;padding:0 24px 24px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px}
+#map{height:calc(100vh - 150px);min-height:530px;border:1px solid #d8e2df;border-radius:12px;background:#e7eff1}
+aside{display:flex;flex-direction:column;gap:14px}.card{background:white;border:1px solid #d8e2df;border-radius:12px;padding:14px}
+h2{font-size:14px;letter-spacing:.04em;color:#405963;margin:0 0 10px}
+.palette{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.swatch{height:38px;border:2px solid white;border-radius:8px;cursor:pointer;box-shadow:0 0 0 1px #ccd8d4}.swatch.active{outline:3px solid #183c2b;outline-offset:1px}
+button,.filelabel{border:1px solid #d4dfdc;background:#f7faf9;border-radius:8px;padding:8px 10px;cursor:pointer;color:#183344;font:inherit}
+button:hover,.filelabel:hover{background:#eaf2ef}.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:13px}
+input[type=search]{width:100%;border:1px solid #d4dfdc;border-radius:8px;padding:10px;font:inherit;background:#f7faf9}
+ .map-note-label{background:#fff;border:1px solid #9aa8a5;border-radius:5px;padding:5px 8px;color:#243b43;font-size:12px;white-space:normal;max-width:180px;box-shadow:0 1px 4px #0002}.map-note-label:before{border-top-color:#9aa8a5}
+#items{height:calc(100vh - 430px);min-height:220px;overflow:auto;margin-top:10px}.item{padding:7px 9px;border-radius:7px;display:flex;gap:8px;align-items:center;cursor:pointer}.item:hover,.item.selected{background:#edf3f0}.dot{width:12px;height:12px;border:1px solid #cdd7d3;border-radius:3px;flex:none}
+.small{font-size:12px;color:#62767b}#status{font-size:13px;color:#52656b;margin-top:9px}.leaflet-container{font:inherit}.leaflet-tooltip.area-label{background:transparent;border:0;box-shadow:none;border-radius:0;padding:0;color:#243b43;font-size:9px;font-weight:500;white-space:nowrap;text-shadow:0 0 2px #fff,0 0 2px #fff;pointer-events:none}.leaflet-tooltip.area-label:before{display:none}
+@media(max-width:900px){header{display:block}main{grid-template-columns:1fr;padding:0 12px 16px}#map{height:58vh;min-height:360px}#items{height:280px}}
+</style></head><body>
+<header><div><h1>Bản đồ tô màu xã, phường Đồng bằng sông Hồng</h1><p>6 tỉnh/thành · Chọn màu rồi nhấn vào xã/phường để tô màu · Tìm địa bàn ở danh sách bên cạnh</p></div><span class="small">Bản đồ đơn vị hành chính cấp xã</span></header>
+<main><div id="map"></div><aside>
+<section class="card"><h2>MÀU ĐANG CHỌN</h2><div class="palette" id="palette"></div>
+<div class="controls"><label><input type="checkbox" id="labels" checked> Hiện tên xã, phường</label><button id="reset">Xóa màu</button><button id="export">Xuất dữ liệu bản đồ</button><label class="filelabel">Nhập dữ liệu bản đồ <input id="import" type="file" accept=".json" hidden></label></div><div id="status">Đang tải dữ liệu ranh giới…</div><div class="small" style="margin-top:10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px" id="provinceLegend"><span><i style="display:inline-block;width:12px;height:12px;background:#f4b6b6;border:1px solid #8b5555;margin-right:6px"></i>Hà Nội</span><span><i style="display:inline-block;width:12px;height:12px;background:#b7d5f5;border:1px solid #456c9b;margin-right:6px"></i>Hải Phòng</span><span><i style="display:inline-block;width:12px;height:12px;background:#c5e7b2;border:1px solid #5b844b;margin-right:6px"></i>Quảng Ninh</span><span><i style="display:inline-block;width:12px;height:12px;background:#f5df9b;border:1px solid #9b813b;margin-right:6px"></i>Bắc Ninh</span><span><i style="display:inline-block;width:12px;height:12px;background:#d9c3ef;border:1px solid #785a9b;margin-right:6px"></i>Hưng Yên</span><span><i style="display:inline-block;width:12px;height:12px;background:#f2c6a5;border:1px solid #9b6847;margin-right:6px"></i>Ninh Bình</span></div></section>
+<section class="card"><h2>DANH SÁCH XÃ, PHƯỜNG</h2><input id="search" type="search" placeholder="Tìm xã, phường…"><div id="items"><div class="small" style="padding:10px">Đang tải danh sách…</div></div></section>
+<section class="card"><h2>CHÚ THÍCH</h2><div class="small">Chọn màu, sau đó bấm xã/phường để tô. Ranh giới lấy từ bộ dữ liệu GeoJSON mở tinhthanhpho.com theo mã tỉnh/thành. Danh mục và ranh giới cần kiểm tra theo nghị quyết sắp xếp cấp xã 2025; đây không phải bản đồ đo đạc pháp lý.</div></section>
+<section class="card"><h2>GHI CHÚ</h2>
+<textarea id="notes" rows="3" placeholder="Nhập nội dung ghi chú..." style="width:100%;resize:vertical;border:1px solid #d4dfdc;border-radius:8px;padding:10px;font:inherit;background:#f7faf9;color:#183344"></textarea>
+<div class="controls"><button id="addNote">＋ Đặt ghi chú lên bản đồ</button><button id="clearNotes">Xóa tất cả ghi chú</button></div>
+<div id="noteStatus" class="small" style="margin-top:8px">Nhập ghi chú, bấm “Đặt ghi chú lên bản đồ”, rồi chọn vị trí trên bản đồ.</div>
+</section>
+</aside></main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyDl0UmlKUKWxHscS9dwIpy9-qY8X6_UN8A",authDomain:"bandodongbangsonghong.firebaseapp.com",databaseURL:"https://bandodongbangsonghong-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"bandodongbangsonghong",storageBucket:"bandodongbangsonghong.firebasestorage.app",messagingSenderId:"110123612719",appId:"1:110123612719:web:9177913cfd267eaaf664da",measurementId:"G-Y2PHZ03RR7"};
+firebase.initializeApp(firebaseConfig);const sharedRef=firebase.database().ref('sharedMap');let cloudReady=false,cloudDebounce=null;
+function pushShared(){if(!cloudReady)return;clearTimeout(cloudDebounce);cloudDebounce=setTimeout(()=>sharedRef.set({colors:colorById,notes:mapNotes.map(n=>({lat:n.lat,lng:n.lng,text:n.text})),noteText:notesBox.value,updatedAt:Date.now()}).catch(e=>{document.getElementById('status').textContent='Lỗi lưu Firebase: '+e.message}),300)}
+const map=L.map('map').setView([20.9,106.1],8);
+// Không tải tile nền bên ngoài: tránh lỗi 403/blocked khi mở file trực tiếp.
+const colors=['#e65359','#f28b27','#f1c83d','#59a052','#74b8b1','#4e7fae','#304d83','#ad79a2','#f48e9c','#9b7763','#8dcc80','#b9b2ae','#d6a5c5','#ffffff'];
+// Màu mặc định riêng cho 6 tỉnh/thành để nhận diện ranh giới cấp tỉnh.
+const provinceColors={'Hà Nội':'#f4b6b6','Hải Phòng':'#b7d5f5','Quảng Ninh':'#c5e7b2','Bắc Ninh':'#f5df9b','Hưng Yên':'#d9c3ef','Ninh Bình':'#f2c6a5'};
+const colorStoreKey='redriver_map_colors_v1';
+let selectedColor=colors[3],features=[],layer,colorById={},layersById=new Map();
+try{colorById=JSON.parse(localStorage.getItem(colorStoreKey)||'{}')}catch(e){colorById={}}
+function saveColors(){try{localStorage.setItem(colorStoreKey,JSON.stringify(colorById));pushShared()}catch(e){document.getElementById('status').textContent='Không thể tự lưu màu trong trình duyệt này; hãy dùng Xuất màu để sao lưu.'}}
+const pal=document.getElementById('palette');
+colors.forEach(c=>{let b=document.createElement('button');b.className='swatch'+(c===selectedColor?' active':'');b.style.background=c;b.title=c;b.onclick=()=>{selectedColor=c;document.querySelectorAll('.swatch').forEach(x=>x.classList.toggle('active',x===b))};pal.appendChild(b)});
+function props(f){return f.properties||{}}
+function nameOf(f){let p=props(f);return p.name||p['name:vi']||p.NAME_3||p.name_vi||p.ward_name||p.ten||p.ten_xa||p.ten_phuong||p.full_name||p.name_en||'Địa bàn'}
+function idOf(f){let p=props(f);return String(p.code||p.ma||p.id||p['@id']||nameOf(f))}
+function sty(f){const province=props(f).__province;return {color:'#ffffff',weight:1.25,opacity:1,fillColor:colorById[idOf(f)]||provinceColors[province]||'#dfe8e3',fillOpacity:1}}
+function repaint(){if(layer)layer.setStyle(sty);renderList()}
+function focus(f){let l=layersById.get(idOf(f));if(l)map.fitBounds(l.getBounds(),{padding:[25,25],maxZoom:12})}
+function paint(f){colorById[idOf(f)]=selectedColor;saveColors();let l=layersById.get(idOf(f));if(l)l.setStyle({fillColor:selectedColor});renderList()}
+function renderList(){let q=document.getElementById('search').value.trim().toLocaleLowerCase('vi'),box=document.getElementById('items');box.innerHTML='';
+features.filter(f=>nameOf(f).toLocaleLowerCase('vi').includes(q)).sort((a,b)=>nameOf(a).localeCompare(nameOf(b),'vi')).forEach(f=>{
+let row=document.createElement('div');row.className='item';let dot=document.createElement('span'),txt=document.createElement('span');dot.className='dot';dot.style.background=colorById[idOf(f)]||'#dfe8e3';txt.textContent=nameOf(f);row.append(dot,txt);row.onclick=()=>{document.querySelectorAll('.item').forEach(x=>x.classList.remove('selected'));row.classList.add('selected');focus(f)};box.appendChild(row)})}
+document.getElementById('search').oninput=renderList;
+// Ghi chú tự lưu cục bộ trong trình duyệt hiện tại
+const notesBox=document.getElementById('notes'), noteStatus=document.getElementById('noteStatus');
+try{notesBox.value=localStorage.getItem('redriver_map_notes_v1')||''}catch(e){}
+notesBox.addEventListener('input',()=>{
+ try{localStorage.setItem('redriver_map_notes_v1',notesBox.value);noteStatus.textContent='Đã lưu ghi chú';pushShared()}
+ catch(e){noteStatus.textContent='Không thể tự lưu; hãy sao chép ghi chú để dự phòng'}
+});
+document.getElementById('clearNotes').onclick=()=>{
+ if(!confirm('Bạn muốn xóa toàn bộ ghi chú?'))return;
+ notesBox.value='';
+ try{localStorage.removeItem('redriver_map_notes_v1')}catch(e){}
+ noteStatus.textContent='Đã xóa ghi chú';
+};
+let noteMode=false, mapNotes=[];
+const noteStoreKey='redriver_map_pinned_notes_v1';
+function saveMapNotes(){try{const plainNotes=mapNotes.map(n=>({lat:n.lat,lng:n.lng,text:n.text}));localStorage.setItem(noteStoreKey,JSON.stringify(plainNotes));noteStatus.textContent='Đã lưu '+plainNotes.length+' ghi chú trên bản đồ';}catch(e){noteStatus.textContent='Không lưu được ghi chú: '+e.message+'. Hãy mở bằng Chrome/Edge và không dùng chế độ ẩn danh.'}}
+function drawMapNotes(){
+ mapNotes.forEach(n=>{
+  if(n.marker)n.marker.remove();
+  n.marker=L.marker([n.lat,n.lng],{draggable:true}).addTo(map);
+  n.marker.bindTooltip(n.text,{permanent:true,direction:'right',className:'map-note-label',opacity:1,interactive:true});
+  n.marker.on('dragend',e=>{const p=e.target.getLatLng();n.lat=p.lat;n.lng=p.lng;saveMapNotes()});
+  n.marker.on('click',()=>{if(confirm('Xóa ghi chú này?')){n.marker.remove();mapNotes=mapNotes.filter(x=>x!==n);saveMapNotes()}});
+ });
+}
+try{const saved=JSON.parse(localStorage.getItem(noteStoreKey)||'[]');mapNotes=Array.isArray(saved)?saved.filter(n=>Number.isFinite(n.lat)&&Number.isFinite(n.lng)&&typeof n.text==='string'):[]}catch(e){mapNotes=[]}
+// Ghi lại lần nữa khi đóng/ tải lại trang để tránh mất thay đổi gần nhất.
+window.addEventListener('beforeunload',saveMapNotes);
+document.getElementById('addNote').onclick=()=>{
+ const text=document.getElementById('notes').value.trim();
+ if(!text){alert('Bạn nhập nội dung ghi chú trước nhé.');return}
+ noteMode=true;
+ document.getElementById('noteStatus').textContent='Đang chờ chọn vị trí trên bản đồ. Bấm vào nơi muốn đặt ghi chú.';
+ document.getElementById('map').style.cursor='crosshair';
+};
+function placeMapNote(latlng){
+ if(!noteMode)return false;
+ const text=document.getElementById('notes').value.trim();
+ if(!text)return false;
+ mapNotes.push({lat:latlng.lat,lng:latlng.lng,text});
+ saveMapNotes();drawMapNotes();
+ noteMode=false;document.getElementById('map').style.cursor='';
+ document.getElementById('noteStatus').textContent='Đã đặt ghi chú. Bạn có thể kéo ghi chú để đổi vị trí; bấm ghi chú để xóa.';
+ return true;
+}
+map.on('click',e=>placeMapNote(e.latlng));
+document.getElementById('clearNotes').onclick=()=>{
+ if(!confirm('Xóa tất cả ghi chú trên bản đồ?'))return;
+ mapNotes.forEach(n=>n.marker&&n.marker.remove());mapNotes=[];saveMapNotes();
+ document.getElementById('noteStatus').textContent='Đã xóa ghi chú trên bản đồ.';
+};
+function refreshLabels(){
+ if(!layer)return;
+ const show=document.getElementById('labels').checked;
+ layer.eachLayer(l=>{
+  if(show){
+   if(!l.getTooltip())l.bindTooltip(nameOf(l.feature),{permanent:true,direction:'center',className:'area-label',opacity:.95});
+   else l.setTooltipContent(nameOf(l.feature));
+   l.openTooltip();
+  }else if(l.getTooltip())l.closeTooltip();
+ });
+ // Leaflet positions labels in screen pixels; hide colliding labels after each zoom.
+ requestAnimationFrame(()=>{
+  const nodes=[...document.querySelectorAll('#map .leaflet-tooltip.area-label')];
+  nodes.forEach(n=>n.style.visibility=show?'visible':'hidden');
+  if(!show)return;
+  const accepted=[];
+  // Prefer labels with more room around their polygon center, while keeping every label fixed-size.
+  const ordered=nodes.map(n=>({n,r:n.getBoundingClientRect()}))
+    .sort((a,b)=>(b.r.width*b.r.height)-(a.r.width*a.r.height));
+  ordered.forEach(({n,r})=>{
+   const pad=2, box={left:r.left-pad,right:r.right+pad,top:r.top-pad,bottom:r.bottom+pad};
+   const hit=accepted.some(a=>!(box.right<=a.left||box.left>=a.right||box.bottom<=a.top||box.top>=a.bottom));
+   if(hit)n.style.visibility='hidden';
+   else {n.style.visibility='visible';accepted.push(box)}
+  });
+ });
+}
+document.getElementById('labels').onchange=refreshLabels;
+map.on('zoomend moveend',refreshLabels);
+document.getElementById('reset').onclick=()=>{colorById={};saveColors();repaint()};
+document.getElementById('export').onclick=()=>{const project={format:'redriver-map-project',version:1,colors:colorById,notes:mapNotes.map(n=>({lat:n.lat,lng:n.lng,text:n.text})),noteText:notesBox.value};let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(project,null,2)],{type:'application/json'}));a.download='du-lieu-ban-do-dong-bang-song-hong.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+document.getElementById('import').onchange=async e=>{try{const data=JSON.parse(await e.target.files[0].text());if(data&&data.format==='redriver-map-project'){colorById=data.colors&&typeof data.colors==='object'?data.colors:{};mapNotes=Array.isArray(data.notes)?data.notes.filter(n=>Number.isFinite(n.lat)&&Number.isFinite(n.lng)&&typeof n.text==='string').map(n=>({lat:n.lat,lng:n.lng,text:n.text})):[];notesBox.value=typeof data.noteText==='string'?data.noteText:'';saveColors();saveMapNotes();try{localStorage.setItem('redriver_map_notes_v1',notesBox.value)}catch(e){}if(layer){layer.remove();layersById.clear();}await load();}else{colorById=data;saveColors();repaint()}}catch(err){alert('File JSON không hợp lệ: '+err.message)}finally{e.target.value=''}};
+async function load(){
+ const provinces=[
+  {name:'Hà Nội',code:'01'},
+  {name:'Hải Phòng',code:'31'},
+  {name:'Quảng Ninh',code:'22'},
+  {name:'Bắc Ninh',code:'24'},
+  {name:'Hưng Yên',code:'33'},
+  {name:'Ninh Bình',code:'37'}
+ ];
+ const all=[], failures=[];
+ for(const p of provinces){
+  const u='https://tinhthanhpho.com/data/wards-'+p.code+'.geojson';
+  try{
+   const r=await fetch(u); if(!r.ok)throw Error('HTTP '+r.status);
+   const d=await r.json(), g=d.type==='FeatureCollection'?d:(d.geojson||d.data||null);
+   if(!g||!Array.isArray(g.features))throw Error('GeoJSON không hợp lệ');
+   g.features.filter(f=>f.geometry).forEach(f=>{
+    f.properties=f.properties||{}; f.properties.__province=p.name; all.push(f);
+   });
+  }catch(e){failures.push(p.name+': '+e.message)}
+ }
+ if(!all.length)throw Error('Không tải được dữ liệu ranh giới. '+failures.join('; '));
+ features=all;
+ layer=L.geoJSON({type:'FeatureCollection',features},{style:sty,onEachFeature:(f,l)=>{
+  layersById.set(idOf(f),l);
+  l.on('click',e=>{if(placeMapNote(e.latlng))return;paint(f)});
+  l.on('mouseover',()=>{l.setStyle({color:'#263b44',weight:2.8,opacity:1,fillOpacity:1});if(l.bringToFront)l.bringToFront()});
+  l.on('mouseout',()=>{l.setStyle(sty(f))});
+  if(document.getElementById('labels').checked)l.bindTooltip(nameOf(f),{permanent:true,direction:'center',className:'area-label',opacity:.95});
+  l.bindPopup(()=>'<b>'+nameOf(f)+'</b><br>'+(props(f).__province||'')+'<br>Nhấn bản đồ để tô màu');
+ }}).addTo(map);
+ map.fitBounds(layer.getBounds(),{padding:[12,12]});renderList();refreshLabels();drawMapNotes();
+ document.getElementById('status').textContent='Đã tải '+features.length+' xã/phường từ '+(provinces.length-failures.length)+'/6 tỉnh/thành.'+(failures.length?' Chưa tải được: '+failures.join(' | '):'');
+}
+load().catch(err=>{document.getElementById('status').textContent='Không tải được dữ liệu ranh giới: '+err.message+'. Hãy thử mở lại khi có Internet.';document.getElementById('items').innerHTML='<div class="small" style="padding:10px">Tải dữ liệu bản đồ thất bại. Kiểm tra kết nối Internet rồi tải lại trang.</div>'});
+
+sharedRef.on('value',snap=>{const d=snap.val();if(!d){cloudReady=true;pushShared();return;}const rc=d.colors&&typeof d.colors==='object'?d.colors:{},rn=Array.isArray(d.notes)?d.notes.filter(n=>Number.isFinite(n.lat)&&Number.isFinite(n.lng)&&typeof n.text==='string'):[];const currentNotes=mapNotes.map(n=>({lat:n.lat,lng:n.lng,text:n.text}));const changed=JSON.stringify(colorById)!==JSON.stringify(rc)||JSON.stringify(currentNotes)!==JSON.stringify(rn)||notesBox.value!==(d.noteText||'');if(changed){colorById=rc;mapNotes=rn;notesBox.value=d.noteText||'';try{localStorage.setItem(colorStoreKey,JSON.stringify(rc));localStorage.setItem(noteStoreKey,JSON.stringify(rn));localStorage.setItem('redriver_map_notes_v1',notesBox.value)}catch(e){}if(layer){layer.remove();layersById.clear();}load().catch(console.error);}cloudReady=true;document.getElementById('status').textContent='Đã kết nối Firebase — dữ liệu đang chia sẻ trực tuyến.';});
+</script></body></html>
